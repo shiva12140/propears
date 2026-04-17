@@ -26,11 +26,10 @@ async def lifespan(app: FastAPI):
     retries = 5
     for i in range(retries):
         try:
-            # Force using the internal service to avoid Cloudflare 429 Rate Limits
             client = await chromadb.AsyncHttpClient(
-                host="prepify-chroma",
-                port=10000,
-                ssl=False
+                host=settings.chroma_host,
+                port=settings.chroma_port,
+                ssl=settings.chroma_ssl
             )
             collection = await client.get_or_create_collection(settings.chroma_collection)
             app.state.chroma_client = client

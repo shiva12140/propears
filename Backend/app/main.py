@@ -20,21 +20,34 @@ async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     
-    client = await chromadb.AsyncHttpClient(
-        host=settings.chroma_host,
-        port=settings.chroma_port,
-        ssl=settings.chroma_ssl
-    )
-    app.state.chroma_client = client
+    # --- RETRY LOGIC FOR CHROMA ---
+    import asyncio
+    client = None
+    retries = 5
+    for i in range(retries):
+        try:
+            client = await chromadb.AsyncHttpClient(
+                host=settings.chroma_host,
+                port=settings.chroma_port,
+                ssl=settings.chroma_ssl
+            )
+            collection = await client.get_or_create_collection(settings.chroma_collection)
+            app.state.chroma_client = client
+            app.state.chroma_collection = collection
+            
+            count = await collection.count()
+            print(f"✅ Successfully loaded collection '{settings.chroma_collection}' with {count} documents.")
+            break
+        except Exception as e:
+            if i < retries - 1:
+                wait_time = (i + 1) * 3
+                print(f"⚠️ ChromaDB connection failed (Attempt {i+1}/{retries}). Retrying in {wait_time}s... Error: {e}")
+                await asyncio.sleep(wait_time)
+            else:
+                print(f"❌ Failed to load ChromaDB collection after {retries} attempts: {e}")
+                # We don't raise here so the server can at least start, though notes will fail until fixed
+    # -------------------------------
 
-    try:
-        collection: Collection = await client.get_or_create_collection(settings.chroma_collection)
-        app.state.chroma_collection = collection
-
-        count = await collection.count()
-        print(f"Successfully loaded collection '{settings.chroma_collection}' with {count} documents.")
-    except Exception as e:
-        print(f"Failed to load ChromaDB collection: {e}")
 
     print("✅ Tables ready!")
     yield

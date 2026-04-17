@@ -22,7 +22,8 @@ async def lifespan(app: FastAPI):
     
     client = await chromadb.AsyncHttpClient(
         host=settings.chroma_host,
-        port=settings.chroma_port
+        port=settings.chroma_port,
+        ssl=settings.chroma_ssl
     )
     app.state.chroma_client = client
 

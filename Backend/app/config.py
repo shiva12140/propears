@@ -14,6 +14,7 @@ class Settings(BaseSettings):
 
     chroma_host: str
     chroma_port: int
+    chroma_ssl: bool = False
     chroma_collection: str
 
     GROQ_API_KEY: str

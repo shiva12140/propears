@@ -73,5 +73,8 @@ async def get_chroma_client(request: Request) -> AsyncHttpClient:
 def get_chroma_collection(request: Request) -> Collection:
     collection = getattr(request.app.state, "chroma_collection", None)
     if collection is None:
-        raise RuntimeError("ChromaDB Collection not loaded during application startup.")
+        raise HTTPException(
+            status_code=503,
+            detail="ChromaDB is not available. The vector database failed to connect during startup. Notes and Quiz features require ChromaDB."
+        )
     return collection
